@@ -11,7 +11,8 @@ import AVFoundation // 17
 
 class CameraViewController: UIViewController {
 
-	lazy private var captureSession = AVCaptureSession() //20
+	lazy private var captureSession = AVCaptureSession() //21
+	lazy private var fileOutput = AVCaptureMovieFileOutput() // 22
 
     @IBOutlet var recordButton: UIButton!
     @IBOutlet var cameraView: CameraPreviewView!
@@ -24,6 +25,8 @@ class CameraViewController: UIViewController {
 		cameraView.videoPlayerView.videoGravity = .resizeAspectFill
 
 		setUpCamera() // 15
+
+		// TODO: Add tap gesture to replay videos
 	}
 
 	override func viewDidAppear(_ animated: Bool) {
@@ -37,10 +40,24 @@ class CameraViewController: UIViewController {
 	}
 
     @IBAction func recordButtonPressed(_ sender: Any) {
-
+		toogleRecording() // 26
 	}
 
 	// Methods
+
+	func updateViews() { // 30
+		recordButton.isSelected = fileOutput.isRecording // 31
+	}
+
+	func toogleRecording() { // 26
+		if fileOutput.isRecording {
+			// stop
+			fileOutput.stopRecording() // 34
+		} else {
+			// start
+			fileOutput.startRecording(to: newRecordingURL(), recordingDelegate: self) // 27
+		}
+	}
 
 
 	func setUpCamera() { // 14
@@ -51,16 +68,21 @@ class CameraViewController: UIViewController {
 		guard let cameraInput = try? AVCaptureDeviceInput(device: camera) else {
 			fatalError("Cannot create camera input") // 18
 		}
-		guard captureSession.canAddInput(cameraInput) else {
+		guard captureSession.canAddInput(cameraInput) else { // 20
 			fatalError("Cannot add camera input to session")
 		}
-		captureSession.addInput(cameraInput)
+		captureSession.addInput(cameraInput) // 21
 		if captureSession.canSetSessionPreset(.hd1920x1080) {
 			captureSession.canSetSessionPreset(.hd1920x1080)
 		}
 		// TODO: Audio input
 		// TODO: Video output (movie)
-		captureSession.commitConfiguration()
+		guard captureSession.canAddOutput(fileOutput) else { // 23
+			fatalError("Can't setup the file output for the movie")
+		}
+		captureSession.addOutput(fileOutput) //24
+
+		captureSession.commitConfiguration() // 19
 		cameraView.session = captureSession
 	}
 
@@ -88,6 +110,20 @@ class CameraViewController: UIViewController {
 		let name = formatter.string(from: Date())
 		let fileURL = documentsDirectory.appendingPathComponent(name).appendingPathExtension("mov")
 		return fileURL
+	}
+}
+
+extension CameraViewController: AVCaptureFileOutputRecordingDelegate { // 28
+	func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
+		if let error = error { // 29
+			print("Error saving video: \(error)")
+		}
+		print("Video: \(outputFileURL.path)") // 33
+		updateViews() // 33
+	}
+
+	func fileOutput(_ output: AVCaptureFileOutput, didStartRecordingTo fileURL: URL, from connections: [AVCaptureConnection]) {
+		updateViews() //32
 	}
 }
 
