@@ -13,7 +13,7 @@ class CameraViewController: UIViewController {
 
 	lazy private var captureSession = AVCaptureSession() //21
 	lazy private var fileOutput = AVCaptureMovieFileOutput() // 22
-
+	var player: AVPlayer? // 38
     @IBOutlet var recordButton: UIButton!
     @IBOutlet var cameraView: CameraPreviewView!
 
@@ -27,6 +27,15 @@ class CameraViewController: UIViewController {
 		setUpCamera() // 15
 
 		// TODO: Add tap gesture to replay videos
+		let tapGesture = UITapGestureRecognizer(target: self, action: // 45
+			#selector(handleTapGesture(tapGesture:)))
+		view.addGestureRecognizer(tapGesture)
+	}
+
+	@objc func handleTapGesture(tapGesture: UITapGestureRecognizer) { //46
+		if tapGesture.state == .ended {
+			playRecording()
+		}
 	}
 
 	override func viewDidAppear(_ animated: Bool) {
@@ -44,6 +53,13 @@ class CameraViewController: UIViewController {
 	}
 
 	// Methods
+
+	func playRecording() { // 44
+		if let player = player {
+			player.seek(to: CMTime.zero)
+			player.play()
+		}
+	}
 
 	func updateViews() { // 30
 		recordButton.isSelected = fileOutput.isRecording // 31
@@ -111,7 +127,24 @@ class CameraViewController: UIViewController {
 		let fileURL = documentsDirectory.appendingPathComponent(name).appendingPathExtension("mov")
 		return fileURL
 	}
-}
+
+		func playMovie(url: URL) { // 37
+
+			player = AVPlayer(url: url) //39
+			let playerLayer = AVPlayerLayer(player: player) // 40
+			var topRect = view.bounds
+			topRect.size.height = topRect.height / 4
+			topRect.size.width = topRect.width / 4
+			topRect.origin.y = view.layoutMargins.top
+
+			//playerLayer.frame = view.bounds // 43
+
+			playerLayer.frame = topRect // 44
+			view.layer.addSublayer(playerLayer) // 41
+			player?.play() // 42
+		}
+	}
+
 
 extension CameraViewController: AVCaptureFileOutputRecordingDelegate { // 28
 	func fileOutput(_ output: AVCaptureFileOutput, didFinishRecordingTo outputFileURL: URL, from connections: [AVCaptureConnection], error: Error?) {
@@ -120,6 +153,8 @@ extension CameraViewController: AVCaptureFileOutputRecordingDelegate { // 28
 		}
 		print("Video: \(outputFileURL.path)") // 33
 		updateViews() // 33
+
+		playMovie(url: outputFileURL) // 36
 	}
 
 	func fileOutput(_ output: AVCaptureFileOutput, didStartRecordingTo fileURL: URL, from connections: [AVCaptureConnection]) {
