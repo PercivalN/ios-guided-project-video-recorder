@@ -14,9 +14,9 @@ class CameraViewController: UIViewController {
 	lazy private var captureSession = AVCaptureSession() //21
 	lazy private var fileOutput = AVCaptureMovieFileOutput() // 22
 	var player: AVPlayer? // 38
-    @IBOutlet var recordButton: UIButton!
-    @IBOutlet var cameraView: CameraPreviewView!
 
+	@IBOutlet var recordButton: UIButton!
+	@IBOutlet var cameraView: CameraPreviewView!
 
 	override func viewDidLoad() {
 		super.viewDidLoad()
@@ -48,7 +48,7 @@ class CameraViewController: UIViewController {
 		captureSession.stopRunning()
 	}
 
-    @IBAction func recordButtonPressed(_ sender: Any) {
+	@IBAction func recordButtonPressed(_ sender: Any) {
 		toogleRecording() // 26
 	}
 
@@ -91,8 +91,20 @@ class CameraViewController: UIViewController {
 		if captureSession.canSetSessionPreset(.hd1920x1080) {
 			captureSession.canSetSessionPreset(.hd1920x1080)
 		}
-		// TODO: Audio input
-		// TODO: Video output (movie)
+
+		// Audio input
+
+		let microphone = bestAudio()
+		guard let audioInput = try? AVCaptureDeviceInput(device: microphone) else {
+			fatalError("Can't create input from microphone")
+		}
+		guard captureSession.canAddInput(audioInput) else {
+			fatalError("Can't add audio input")
+		}
+		captureSession.addInput(audioInput)
+
+
+		// Video output (movie)
 		guard captureSession.canAddOutput(fileOutput) else { // 23
 			fatalError("Can't setup the file output for the movie")
 		}
@@ -102,6 +114,12 @@ class CameraViewController: UIViewController {
 		cameraView.session = captureSession
 	}
 
+	private func bestAudio() -> AVCaptureDevice {
+		if let device = AVCaptureDevice.default(for: .audio) {
+			return device
+		}
+		fatalError("No audio")
+	}
 
 	/// WideAngle Lens is on every iphone that has shipped through 2019
 	private func bestCamera() -> AVCaptureDevice { // 16
@@ -128,22 +146,22 @@ class CameraViewController: UIViewController {
 		return fileURL
 	}
 
-		func playMovie(url: URL) { // 37
+	func playMovie(url: URL) { // 37
 
-			player = AVPlayer(url: url) //39
-			let playerLayer = AVPlayerLayer(player: player) // 40
-			var topRect = view.bounds
-			topRect.size.height = topRect.height / 4
-			topRect.size.width = topRect.width / 4
-			topRect.origin.y = view.layoutMargins.top
+		player = AVPlayer(url: url) //39
+		let playerLayer = AVPlayerLayer(player: player) // 40
+		var topRect = view.bounds
+		topRect.size.height = topRect.height / 4
+		topRect.size.width = topRect.width / 4
+		topRect.origin.y = view.layoutMargins.top
 
-			//playerLayer.frame = view.bounds // 43
+		//playerLayer.frame = view.bounds // 43
 
-			playerLayer.frame = topRect // 44
-			view.layer.addSublayer(playerLayer) // 41
-			player?.play() // 42
-		}
+		playerLayer.frame = topRect // 44
+		view.layer.addSublayer(playerLayer) // 41
+		player?.play() // 42
 	}
+}
 
 
 extension CameraViewController: AVCaptureFileOutputRecordingDelegate { // 28
