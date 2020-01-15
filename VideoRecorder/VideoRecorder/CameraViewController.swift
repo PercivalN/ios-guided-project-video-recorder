@@ -7,8 +7,11 @@
 //
 
 import UIKit
+import AVFoundation // 17
 
 class CameraViewController: UIViewController {
+
+	lazy private var captureSession = AVCaptureSession() //20
 
     @IBOutlet var recordButton: UIButton!
     @IBOutlet var cameraView: CameraPreviewView!
@@ -19,13 +22,62 @@ class CameraViewController: UIViewController {
 
 		// Resize camera preview to fill the entire screen
 		cameraView.videoPlayerView.videoGravity = .resizeAspectFill
+
+		setUpCamera() // 15
 	}
 
+	override func viewDidAppear(_ animated: Bool) {
+		super.viewDidAppear(animated)
+		captureSession.startRunning()
+	}
+
+	override func viewDidDisappear(_ animated: Bool) {
+		super.viewDidDisappear(animated)
+		captureSession.stopRunning()
+	}
 
     @IBAction func recordButtonPressed(_ sender: Any) {
 
 	}
-	
+
+	// Methods
+
+
+	func setUpCamera() { // 14
+		let camera = bestCamera() // 17
+		captureSession.beginConfiguration()
+		// make changes to the devices connected
+		// Video input
+		guard let cameraInput = try? AVCaptureDeviceInput(device: camera) else {
+			fatalError("Cannot create camera input") // 18
+		}
+		guard captureSession.canAddInput(cameraInput) else {
+			fatalError("Cannot add camera input to session")
+		}
+		captureSession.addInput(cameraInput)
+		if captureSession.canSetSessionPreset(.hd1920x1080) {
+			captureSession.canSetSessionPreset(.hd1920x1080)
+		}
+		// TODO: Audio input
+		// TODO: Video output (movie)
+		captureSession.commitConfiguration()
+		cameraView.session = captureSession
+	}
+
+
+	/// WideAngle Lens is on every iphone that has shipped through 2019
+	private func bestCamera() -> AVCaptureDevice { // 16
+		if let device = AVCaptureDevice.default(.builtInUltraWideCamera, for: .video, position: .back) {
+			return device
+		}
+		// Fallback camera
+		if let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) {
+			return device
+		}
+		fatalError("No cameras on the device. Or you are running on the Simulator (not supported)")
+	}
+
+
 	/// Creates a new file URL in the documents directory
 	private func newRecordingURL() -> URL {
 		let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
